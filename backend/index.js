@@ -1,42 +1,40 @@
+// backend/index.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 
+// --- NEW IMPORTS ---
+import blogRoutes from './routes/blogRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // --- Middleware ---
-
-// 1. Security: CORS (Cross-Origin Resource Sharing)
 app.use(cors({
-  origin: 'http://localhost:5173', // Allow our frontend to make requests
+  origin: 'http://localhost:5173',
 }));
-
-// 2. Security: Set various HTTP headers
 app.use(helmet());
-
-// 3. Security: Basic Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per 15 min
+  windowMs: 15 * 60 * 1000,
+  max: 100,
 });
 app.use('/api', limiter);
-
-// 4. JSON Body Parser (so we can read req.body)
 app.use(express.json());
-
-// 5. Simple request logger (Level 4 requirement)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// --- API Routes (Coming Next) ---
-// app.use('/api/blogs', blogRoutes);
+// --- API Routes ---
+// --- THIS LINE IS NEW ---
+app.use('/api/blogs', blogRoutes);
 
-// --- Error Handling (Coming Next) ---
-// app.use(errorHandler);
+// --- Global Error Handling ---
+// --- THIS LINE IS NEW ---
+// It MUST be the last middleware
+app.use(errorHandler);
 
 // Start Server
 app.listen(PORT, () => {
