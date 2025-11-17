@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import axios from 'axios'; // Import axios
 import App from './App.jsx';
-import './index.css'; // We'll add styles later
+import './index.css'; 
 
 // --- API Configuration ---
 // This tells axios to send all requests to your backend's URL
