@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// frontend/src/App.jsx
+
+import { Routes, Route, Link } from 'react-router-dom';
+
+// Import your new page components
+import BlogListPage from './pages/BlogListPage';
+import SinglePostPage from './pages/SinglePostPage';
+import CreatePostPage from './pages/CreatePostPage';
+import EditPostPage from './pages/EditPostPage';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      {/* Simple Navigation Bar */}
+      <nav style={{ padding: '1rem', backgroundColor: '#333' }}>
+        <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '1.2rem' }}>
+          IICL Assignment - Blog App
+        </Link>
+      </nav>
+
+      {/* Main Content Area */}
+      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '1rem' }}>
+        <Routes>
+          {/* Page: Blog list view (Level 2) */}
+          <Route path="/" element={<BlogListPage />} />
+
+          {/* Page: View single post (Level 2) */}
+          <Route path="/post/:id" element={<SinglePostPage />} />
+
+          {/* Page: Create form (Level 2) */}
+          <Route path="/create" element={<CreatePostPage />} />
+
+          {/* Page: Edit form (Level 2) */}
+          <Route path="/edit/:id" element={<EditPostPage />} />
+        </Routes>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
