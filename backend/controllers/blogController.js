@@ -1,130 +1,116 @@
 // backend/controllers/blogController.js
 
-// 1. IMPORTS GO AT THE VERY TOP
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { db } from '../db/index.js';
+import { blogs } from '../db/schema.js';
+import { eq, ilike, and, gte, lt, desc, count } from 'drizzle-orm';
 
-// 2. HELPER FUNCTION
 // Helper to handle async route errors
 const asyncHandler = fn => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 // Helper function to create a date range filter for a specific day
-// This function converts a YYYY-MM-DD string into a Prisma filter 
-// for the start of the day (>=) and the start of the next day (<).
 const getDateRangeFilter = (dateString) => {
   if (!dateString) return null;
 
   try {
-    // 1. Start of the day (inclusive, gte)
-    // Appending 'T00:00:00.000Z' ensures the date is treated as midnight UTC 
-    // for the selected day, which is necessary for correct date filtering.
     const startDate = new Date(`${dateString}T00:00:00.000Z`);
-    
-    // 2. Start of the next day (exclusive, lt)
     const nextDay = new Date(startDate);
     nextDay.setDate(startDate.getDate() + 1);
     
-    // Basic validation to ensure valid dates
     if (isNaN(startDate.getTime()) || isNaN(nextDay.getTime())) {
       return null;
     }
     
-    return {
-      gte: startDate,
-      lt: nextDay,
-    };
+    return { start: startDate, end: nextDay };
   } catch (e) {
     console.error("Date parsing error:", e);
     return null;
   }
 };
 
-
-// 3. FUNCTIONS WRAPPED IN THE HELPER
-
 // 1. POST /api/blogs – Create a post
-export const createBlog = asyncHandler(async (req, res, next) => {
-  // Input is already validated...
+export const createBlog = asyncHandler(async (req, res) => {
   const { title, content, author } = req.body;
   
-  const newBlog = await prisma.blog.create({
-    data: {
+  // Drizzle insert returning the created object
+  const [newBlog] = await db.insert(blogs)
+    .values({
       title,
       content,
       author,
-    },
-  });
+    })
+    .returning();
   
   res.status(201).json(newBlog);
 });
 
-// 2. GET /api/blogs – Get all posts (with Pagination, Author Filter, and Date Filter)
-export const getAllBlogs = asyncHandler(async (req, res, next) => {
+// 2. GET /api/blogs – Get all posts (Pagination + Filters)
+export const getAllBlogs = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const pageSize = parseInt(req.query.pageSize) || 10;
-  
-  // Get all filter and pagination queries, replacing startDate/endDate ---
   const { author, createdAtDate, updatedAtDate } = req.query; 
 
-  const skip = (page - 1) * pageSize;
+  const conditions = [];
 
-  const where = {};
-  
-  // 1. Author Filter Logic
+  // 1. Author Filter (Case-insensitive partial match)
   if (author) {
-    where.author = {
-      // Use 'contains' for partial matching and 'insensitive' for case-insensitivity
-      contains: author,
-      mode: 'insensitive', 
-    };
+    conditions.push(ilike(blogs.author, `%${author}%`));
   }
   
-  // 2. CreatedAt Date Filter Logic (Exact day match)
+  // 2. CreatedAt Date Filter
   const createdAtRange = getDateRangeFilter(createdAtDate);
   if (createdAtRange) {
-    where.createdAt = createdAtRange;
+    conditions.push(and(
+      gte(blogs.createdAt, createdAtRange.start),
+      lt(blogs.createdAt, createdAtRange.end)
+    ));
   }
 
-  // 3. UpdatedAt Date Filter Logic (Exact day match)
+  // 3. UpdatedAt Date Filter
   const updatedAtRange = getDateRangeFilter(updatedAtDate);
   if (updatedAtRange) {
-    where.updatedAt = updatedAtRange;
+    conditions.push(and(
+      gte(blogs.updatedAt, updatedAtRange.start),
+      lt(blogs.updatedAt, updatedAtRange.end)
+    ));
   }
 
-  // Use the 'where' clause in both the 'findMany' and 'count' queries
-  const [blogs, total] = await prisma.$transaction([
-    prisma.blog.findMany({
-      where: where,
-      skip: skip,
-      take: pageSize,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    }),
-    prisma.blog.count({
-      where: where,
-    }),
+  // Combine all conditions
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Run queries in parallel for performance
+  const [data, [totalRecord]] = await Promise.all([
+    db.select()
+      .from(blogs)
+      .where(whereClause)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .orderBy(desc(blogs.createdAt)), // Order by newest first
+    
+    db.select({ count: count() })
+      .from(blogs)
+      .where(whereClause)
   ]);
 
   res.status(200).json({
-    data: blogs,
+    data,
     meta: {
-      total,
+      total: totalRecord?.count || 0,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages: Math.ceil((totalRecord?.count || 0) / pageSize),
     },
   });
 });
 
 // 3. GET /api/blogs/{id} – Get a post by ID
-export const getBlogById = asyncHandler(async (req, res, next) => {
+export const getBlogById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const blog = await prisma.blog.findUnique({
-    where: { id },
-  });
+  
+  const [blog] = await db.select()
+    .from(blogs)
+    .where(eq(blogs.id, id));
 
   if (!blog) {
     return res.status(404).json({ error: 'Blog post not found' });
@@ -133,44 +119,31 @@ export const getBlogById = asyncHandler(async (req, res, next) => {
 });
 
 // 4. PUT /api/blogs/{id} – Update a post
-export const updateBlog = asyncHandler(async (req, res, next) => {
+export const updateBlog = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, content, author } = req.body;
 
-  try {
-    const updatedBlog = await prisma.blog.update({
-      where: { id },
-      data: {
-        title,
-        content,
-        author,
-      },
-    });
-    res.status(200).json(updatedBlog);
-  } catch (error) {
-    // Handle case where the post to update doesn't exist
-    if (error.code === 'P2025') { 
-      return res.status(404).json({ error: 'Blog post not found' });
-    }
-    next(error);
+  const [updatedBlog] = await db.update(blogs)
+    .set({ title, content, author })
+    .where(eq(blogs.id, id))
+    .returning();
+
+  if (!updatedBlog) {
+    return res.status(404).json({ error: 'Blog post not found' });
   }
+  res.status(200).json(updatedBlog);
 });
 
-
 // 5. DELETE /api/blogs/{id} – Delete a post
-export const deleteBlog = asyncHandler(async (req, res, next) => {
+export const deleteBlog = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  try {
-    await prisma.blog.delete({
-      where: { id },
-    });
-    // 204 No Content is the standard response for a successful delete
-    res.status(204).send(); 
-  } catch (error) {
-    // Handle case where the post to delete doesn't exist
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Blog post not found' });
-    }
-    next(error);
+
+  const [deletedBlog] = await db.delete(blogs)
+    .where(eq(blogs.id, id))
+    .returning({ id: blogs.id }); // We only need to return ID to confirm deletion
+
+  if (!deletedBlog) {
+    return res.status(404).json({ error: 'Blog post not found' });
   }
+  res.status(204).send(); 
 });
