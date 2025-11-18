@@ -1,19 +1,18 @@
-// backend/index.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
-
-// --- NEW IMPORTS ---
 import blogRoutes from './routes/blogRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const frontendUrlNoSlash = process.env.FRONTEND_URL ?  process.env.FRONTEND_URL.replace(/\/$/, '') : null;
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL, // deployed vercel url
+  frontendUrlNoSlash, // deployed vercel url
   'http://localhost:5173'     
-];
+].filter(Boolean);
 
 // --- Middleware ---
 app.use(cors({
@@ -45,7 +44,6 @@ app.use((req, res, next) => {
 app.use('/api/blogs', blogRoutes);
 
 // --- Global Error Handling ---
-// It MUST be the last middleware
 app.use(errorHandler);
 
 // Start Server
