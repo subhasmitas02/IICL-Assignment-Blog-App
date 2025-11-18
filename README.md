@@ -8,6 +8,13 @@ The project is divided into two main parts:
 
 ---
 
+| Live Demo | Link |
+|--------|------|
+| **Frontend (Vercel)** | https://iicl-assignment-blog-app.vercel.app |
+| **Backend API (Render)** | https://blog-api-2zav.onrender.com |
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Backend:** Node.js, Express, Prisma, SQLite (for local dev), PostgreSQL (for production)
