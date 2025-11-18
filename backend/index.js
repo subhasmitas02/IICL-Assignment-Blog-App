@@ -1,18 +1,26 @@
+// backend/index.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+
+// --- NEW IMPORTS ---
 import blogRoutes from './routes/blogRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const frontendUrlNoSlash = process.env.FRONTEND_URL ?  process.env.FRONTEND_URL.replace(/\/$/, '') : null;
+
+// FIX: Dynamically remove trailing slash from FRONTEND_URL 
+// to ensure it matches the browser's Origin header exactly.
+const frontendUrlNoSlash = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.replace(/\/$/, '') 
+  : null;
 
 const allowedOrigins = [
-  frontendUrlNoSlash, // deployed vercel url
+  frontendUrlNoSlash, 
   'http://localhost:5173'     
-].filter(Boolean);
+].filter(Boolean); // Filter out any null/undefined entries
 
 // --- Middleware ---
 app.use(cors({
@@ -20,6 +28,7 @@ app.use(cors({
    
     if (!origin) return callback(null, true);
 
+  
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
