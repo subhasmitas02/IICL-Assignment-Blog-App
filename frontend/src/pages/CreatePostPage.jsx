@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import BlogForm from '../components/BlogForm.jsx'; // Import the reusable form
+import BlogForm from '../components/BlogForm.jsx'; // Importing reusable form
 
 function CreatePostPage() {
   const navigate = useNavigate();
@@ -18,6 +18,7 @@ function CreatePostPage() {
       .then(response => {
         setIsLoading(false);
         // On success, navigate to the new post's page
+        alert('Post created successfully!');
         navigate(`/post/${response.data.id}`);
       })
       .catch(error => {

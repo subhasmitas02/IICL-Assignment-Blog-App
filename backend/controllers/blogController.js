@@ -10,8 +10,39 @@ const asyncHandler = fn => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
+// Helper function to create a date range filter for a specific day
+// This function converts a YYYY-MM-DD string into a Prisma filter 
+// for the start of the day (>=) and the start of the next day (<).
+const getDateRangeFilter = (dateString) => {
+  if (!dateString) return null;
 
-// 3. YOUR FUNCTIONS WRAPPED IN THE HELPER
+  try {
+    // 1. Start of the day (inclusive, gte)
+    // Appending 'T00:00:00.000Z' ensures the date is treated as midnight UTC 
+    // for the selected day, which is necessary for correct date filtering.
+    const startDate = new Date(`${dateString}T00:00:00.000Z`);
+    
+    // 2. Start of the next day (exclusive, lt)
+    const nextDay = new Date(startDate);
+    nextDay.setDate(startDate.getDate() + 1);
+    
+    // Basic validation to ensure valid dates
+    if (isNaN(startDate.getTime()) || isNaN(nextDay.getTime())) {
+      return null;
+    }
+    
+    return {
+      gte: startDate,
+      lt: nextDay,
+    };
+  } catch (e) {
+    console.error("Date parsing error:", e);
+    return null;
+  }
+};
+
+
+// 3. FUNCTIONS WRAPPED IN THE HELPER
 
 // 1. POST /api/blogs – Create a post
 export const createBlog = asyncHandler(async (req, res, next) => {
@@ -29,22 +60,52 @@ export const createBlog = asyncHandler(async (req, res, next) => {
   res.status(201).json(newBlog);
 });
 
-// 2. GET /api/blogs – Get all posts (with Pagination Bonus)
+// 2. GET /api/blogs – Get all posts (with Pagination, Author Filter, and Date Filter)
 export const getAllBlogs = asyncHandler(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const pageSize = parseInt(req.query.pageSize) || 10;
   
+  // Get all filter and pagination queries, replacing startDate/endDate ---
+  const { author, createdAtDate, updatedAtDate } = req.query; 
+
   const skip = (page - 1) * pageSize;
 
+  const where = {};
+  
+  // 1. Author Filter Logic
+  if (author) {
+    where.author = {
+      // Use 'contains' for partial matching and 'insensitive' for case-insensitivity
+      contains: author,
+      mode: 'insensitive', 
+    };
+  }
+  
+  // 2. CreatedAt Date Filter Logic (Exact day match)
+  const createdAtRange = getDateRangeFilter(createdAtDate);
+  if (createdAtRange) {
+    where.createdAt = createdAtRange;
+  }
+
+  // 3. UpdatedAt Date Filter Logic (Exact day match)
+  const updatedAtRange = getDateRangeFilter(updatedAtDate);
+  if (updatedAtRange) {
+    where.updatedAt = updatedAtRange;
+  }
+
+  // Use the 'where' clause in both the 'findMany' and 'count' queries
   const [blogs, total] = await prisma.$transaction([
     prisma.blog.findMany({
+      where: where,
       skip: skip,
       take: pageSize,
       orderBy: {
         createdAt: 'desc',
       },
     }),
-    prisma.blog.count(),
+    prisma.blog.count({
+      where: where,
+    }),
   ]);
 
   res.status(200).json({

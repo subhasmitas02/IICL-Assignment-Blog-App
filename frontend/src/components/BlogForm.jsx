@@ -2,18 +2,11 @@
 
 import { useState, useEffect } from 'react';
 
-// This form is reusable for both Create and Edit
-// initialData will be empty for 'Create' and populated for 'Edit'
 function BlogForm({ onSubmit, initialData = { title: '', content: '', author: '' }, isLoading = false }) {
   const [formData, setFormData] = useState(initialData);
   const [error, setError] = useState('');
 
-  // Sync form data if initialData changes (for edit page)
-  useEffect(() => {
-    setFormData(initialData);
-  }, [initialData]);
 
-  // Feature: Form controls
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevData => ({
@@ -24,20 +17,17 @@ function BlogForm({ onSubmit, initialData = { title: '', content: '', author: ''
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Feature: Basic validation (Level 2 Requirement)
     if (!formData.title || !formData.content || !formData.author) {
       setError('All fields are required.');
       return;
     }
     setError('');
-
-    // Pass the valid data up to the parent page (CreatePostPage or EditPostPage)
     onSubmit(formData);
   };
 
+  
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 text-black">
       {error && (
         <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
           {error}
@@ -55,7 +45,7 @@ function BlogForm({ onSubmit, initialData = { title: '', content: '', author: ''
           name="title"
           value={formData.title}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 text-black  block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:outline-blue-500" // <-- Updated
         />
       </div>
 
@@ -70,7 +60,7 @@ function BlogForm({ onSubmit, initialData = { title: '', content: '', author: ''
           name="author"
           value={formData.author}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 text-black  block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:outline-blue-500" // <-- Updated
         />
       </div>
 
@@ -85,7 +75,7 @@ function BlogForm({ onSubmit, initialData = { title: '', content: '', author: ''
           rows="10"
           value={formData.content}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 text-black  block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:outline-blue-500"// <-- Updated
         ></textarea>
       </div>
 

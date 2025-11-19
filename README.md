@@ -12,7 +12,7 @@ The project is divided into two main parts:
 
 * **Backend:** Node.js, Express, Prisma, SQLite (for local dev), PostgreSQL (for production)
 * **Frontend:** React (Vite), React Router, Axios
-* **Styling:** Tailwind CSS, @tailwindcss/forms
+* **Styling:** Tailwind CSS
 * **Security:** Helmet, express-rate-limit, express-validator
 * **Deployment:** Render (Backend), Vercel (Frontend)
 

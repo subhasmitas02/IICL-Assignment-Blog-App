@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import BlogForm from '../components/BlogForm.jsx'; // Import the reusable form
+import BlogForm from '../components/BlogForm.jsx'; // Importing the reusable form
 
 function EditPostPage() {
   const [initialData, setInitialData] = useState(null); // State to hold the post's existing data
@@ -41,6 +41,8 @@ function EditPostPage() {
     axios.put(`/blogs/${id}`, formData)
       .then(response => {
         setIsLoading(false);
+
+        alert('Post updated successfully!');
         // On success, navigate to the updated post's page
         navigate(`/post/${response.data.id}`);
       })

@@ -10,11 +10,25 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // deployed vercel url
+  'http://localhost:5173'     
+];
 
 // --- Middleware ---
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+   
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  }
 }));
+
 app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -27,12 +41,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- API Routes ---
-// --- THIS LINE IS NEW ---
+// --- API Routes --
 app.use('/api/blogs', blogRoutes);
 
 // --- Global Error Handling ---
-// --- THIS LINE IS NEW ---
 // It MUST be the last middleware
 app.use(errorHandler);
 
